@@ -13,10 +13,10 @@
 
 #include "Globals.h"
 #include "ImageWidget.h"
-#include <Fl/Fl_Window.h>
-#include <Fl/Fl_Input.h>
-#include <Fl/Fl_Box.h>
-#include <Fl/fl_draw.h>
+#include <FL/Fl_Window.H>
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Box.H>
+#include <FL/fl_draw.H>
 #include "libtarga.h"
 #include <string.h>
 #include "TargaImage.h"

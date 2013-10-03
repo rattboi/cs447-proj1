@@ -1,9 +1,6 @@
-INCLUDE = -I/p/graphics/local/packages/fltk-1.0.11/include\
-	 -I/p/graphics/local/packages/libtarga/include
+INCLUDE = 
 
-LIB = -L/p/graphics/local/packages/fltk-1.0.11/lib\
-	-L/p/graphics/local/packages/libtarga/lib\
-	-L/usr/X11R6/lib
+LIB = -L/usr/X11R6/lib -L.
 
 LINK = -lfltk -lX11 -lXext -ltarga
 

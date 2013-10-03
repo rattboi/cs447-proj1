@@ -12,8 +12,8 @@
 #ifndef _IMAGE_WIDGET_H_
 #define _IMAGE_WIDGET_H_
 
-#include <Fl/Fl.h>
-#include <Fl/Fl_Widget.h>
+#include <FL/Fl.H>
+#include <FL/Fl_Widget.H>
 
 class Fl_Box;
 class Fl_Input;

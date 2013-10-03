@@ -16,8 +16,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#include <Fl/Fl.h>
-#include <Fl/Fl_Window.h>
+#include <FL/Fl.H>
+#include <FL/Fl_Window.H>
 #include <string.h>
 #include <iostream>
 #include <vector>

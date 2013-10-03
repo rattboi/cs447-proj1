@@ -12,8 +12,8 @@
 #ifndef _TARGA_IMAGE_H_
 #define _TARGA_IMAGE_H_
 
-#include <Fl/Fl.h>
-#include <Fl/Fl_Widget.h>
+#include <FL/Fl.H>
+#include <FL/Fl_Widget.H>
 #include <stdio.h>
 
 class Stroke;
