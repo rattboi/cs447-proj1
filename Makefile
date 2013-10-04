@@ -4,10 +4,13 @@ LIB = -L/usr/X11R6/lib -L.
 
 LINK = -lfltk -lX11 -lXext -ltarga
 
-OBJ = ImageWidget.o ScriptHandler.o TargaImage.o 
+OBJ = ImageWidget.o ScriptHandler.o TargaImage.o Main.o
 
 Project1: $(OBJ) libtarga.a
-	g++ -ggdb -Wall -o Project1 Main.cpp $(OBJ) $(INCLUDE) $(LIB) $(LINK) 
+	g++ -ggdb -Wall -o Project1 $(OBJ) $(INCLUDE) $(LIB) $(LINK) 
+
+Main.o: Main.cpp 
+	g++ -ggdb -Wall -c -o Main.o Main.cpp $(INCLUDE)
 
 ImageWidget.o: ImageWidget.cpp ImageWidget.h
 	g++ -ggdb -Wall -c -o ImageWidget.o ImageWidget.cpp $(INCLUDE)
