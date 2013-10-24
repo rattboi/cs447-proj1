@@ -134,7 +134,7 @@ unsigned char* TargaImage::To_RGB(void)
 	    int out_offset = i * width * 3;
 
 	    for (j = 0 ; j < width ; j++)
-        {
+            {
 	        RGBA_To_RGB(data + (in_offset + j*4), rgb + (out_offset + j*3));
 	    }
     }
@@ -213,8 +213,20 @@ TargaImage* TargaImage::Load_Image(char *filename)
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::To_Grayscale()
 {
-    ClearToBlack();
-    return false;
+    if (! data)
+    	return NULL;
+    
+    for (int i = 0 ; i < width * height * 4 ; i += 4)
+    {
+        unsigned char        rgb[3];
+        unsigned char        lumin;
+
+        RGBA_To_RGB(data + i, rgb);
+        lumin = (unsigned char)((0.299 * (double)rgb[0]) + (0.587 * (double)rgb[1]) + (0.114 * (double)rgb[2]));
+        data[i] =  data[i+1] = data[i+2] = lumin;
+    }
+
+    return true;
 }// To_Grayscale
 
 
@@ -226,8 +238,20 @@ bool TargaImage::To_Grayscale()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Quant_Uniform()
 {
-    ClearToBlack();
-    return false;
+    if (! data)
+    	return NULL;
+    
+    for (int i = 0 ; i < width * height * 4 ; i += 4)
+    {
+        unsigned char        rgb[3];
+
+        RGBA_To_RGB(data + i, rgb);
+	data[i+0] = rgb[0] & (255 ^ 31);
+	data[i+1] = rgb[1] & (255 ^ 31);
+	data[i+2] = rgb[2] & (255 ^ 63);
+    }
+
+    return true;
 }// Quant_Uniform
 
 
