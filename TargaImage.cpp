@@ -389,8 +389,22 @@ bool TargaImage::Dither_Bright()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Cluster()
 {
-    ClearToBlack();
-    return false;
+    float thresh_mat[4][4] = {{.75,   .375,  .625,   .25},
+                              {.0625, 1,     .875,   .4375},
+                              {.5,    .8125, .9375, .1250},
+                              {.1875, .5625, .3125, .6875}};
+    if (! data)
+        return NULL;
+    To_Grayscale();
+
+    for (int i = 0 ; i < height; i++ )
+        for (int j = 0; j < width; j++) {
+            int off = ((i*width)+j)*4;
+            data[off+0] = data[off+1] = data[off+2] = ((data[off] >= (thresh_mat[i%4][j%4] * 255)) ? 255 : 0);
+            data[off+3] = 255;
+        }
+    
+    return true;
 }// Dither_Cluster
 
 
