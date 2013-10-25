@@ -190,8 +190,8 @@ TargaImage* TargaImage::Load_Image(char *filename)
     if (!temp_data)
     {
         cout << "TGA Error: %s\n", tga_error_string(tga_get_last_error());
-	    width = height = 0;
-	    return NULL;
+        width = height = 0;
+        return NULL;
     }
     temp_image = new TargaImage(width, height, temp_data);
     free(temp_data);
@@ -238,17 +238,18 @@ bool TargaImage::To_Grayscale()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Quant_Uniform()
 {
+    #define KEEP_UPPER(v,b) v & (~((1 << (8-b))-1))
     if (! data)
-    	return NULL;
+        return NULL;
     
     for (int i = 0 ; i < width * height * 4 ; i += 4)
     {
         unsigned char        rgb[3];
 
         RGBA_To_RGB(data + i, rgb);
-	data[i+0] = rgb[0] & (255 ^ 31);
-	data[i+1] = rgb[1] & (255 ^ 31);
-	data[i+2] = rgb[2] & (255 ^ 63);
+        data[i+0] = KEEP_UPPER(rgb[0],3); 
+        data[i+1] = KEEP_UPPER(rgb[1],3); 
+        data[i+2] = KEEP_UPPER(rgb[2],2);
     }
 
     return true;
@@ -263,6 +264,7 @@ bool TargaImage::Quant_Uniform()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Quant_Populosity()
 {
+
     ClearToBlack();
     return false;
 }// Quant_Populosity
@@ -275,8 +277,23 @@ bool TargaImage::Quant_Populosity()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Threshold()
 {
-    ClearToBlack();
-    return false;
+    if (! data)
+        return NULL;
+    
+    To_Grayscale();
+
+    for (int i = 0 ; i < width * height * 4 ; i += 4)
+    {
+        unsigned char  rgb[3];
+        unsigned char  blackwhite;
+
+        RGBA_To_RGB(data + i, rgb);
+        
+        blackwhite = (rgb[0] > 128) ? 255 : 0; 
+
+        data[i+0] = data[i+1] = data[i+2] = blackwhite;
+    }
+    return true;
 }// Dither_Threshold
 
 

@@ -6,8 +6,8 @@ LINK = -lfltk -lX11 -lXext -ltarga
 
 OBJ = ImageWidget.o ScriptHandler.o TargaImage.o Main.o
 
-Project1: $(OBJ) libtarga.a
-	g++ -ggdb -Wall -o Project1 $(OBJ) $(INCLUDE) $(LIB) $(LINK) 
+proj1: $(OBJ) libtarga.a
+	g++ -ggdb -Wall -o proj1 $(OBJ) $(INCLUDE) $(LIB) $(LINK) 
 
 Main.o: Main.cpp 
 	g++ -ggdb -Wall -c -o Main.o Main.cpp $(INCLUDE)
@@ -24,7 +24,7 @@ TargaImage.o: TargaImage.cpp TargaImage.h
 clean:
 	@for obj in $(OBJ); do\
 		if test -f $$obj; then rm $$obj; fi; done
-	@if (test -f Project1); then rm Project1; fi;
+	@if (test -f proj1); then rm proj1; fi;
 	rm libtarga.o
 	rm libtarga.a
 
