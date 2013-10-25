@@ -15,6 +15,7 @@
 #include "TargaImage.h"
 #include "libtarga.h"
 #include <stdlib.h>
+#include <time.h>
 #include <assert.h>
 #include <memory.h>
 #include <math.h>
@@ -304,8 +305,34 @@ bool TargaImage::Dither_Threshold()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Random()
 {
-    ClearToBlack();
-    return false;
+    srand(time(NULL));
+
+    if (! data)
+        return NULL;
+    
+    To_Grayscale();
+
+    int sum = 0;
+    for (int i = 0; i < width * height * 4 ; i += 4)
+        sum += data[i];
+    sum /= (width * height);
+
+    for (int i = 0 ; i < width * height * 4 ; i += 4)
+    {
+        unsigned char  rgb[3];
+        unsigned char  blackwhite;
+        int myrand;
+        int randthresh;
+
+        RGBA_To_RGB(data + i, rgb);
+        myrand = (rand() % 52) - 26;
+        randthresh = (int)rgb[0] + myrand;
+        
+        blackwhite = (randthresh > sum) ? 255 : 0; 
+
+        data[i+0] = data[i+1] = data[i+2] = blackwhite;
+    }
+    return true;
 }// Dither_Random
 
 
@@ -330,8 +357,28 @@ bool TargaImage::Dither_FS()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Bright()
 {
-    ClearToBlack();
-    return false;
+    if (! data)
+        return NULL;
+    
+    To_Grayscale();
+
+    int sum = 0;
+    for (int i = 0; i < width * height * 4 ; i += 4)
+        sum += data[i];
+    sum /= (width * height);
+
+    for (int i = 0 ; i < width * height * 4 ; i += 4)
+    {
+        unsigned char  rgb[3];
+        unsigned char  blackwhite;
+
+        RGBA_To_RGB(data + i, rgb);
+        
+        blackwhite = (rgb[0] > sum) ? 255 : 0; 
+
+        data[i+0] = data[i+1] = data[i+2] = blackwhite;
+    }
+    return true;
 }// Dither_Bright
 
 
