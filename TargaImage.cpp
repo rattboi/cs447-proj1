@@ -342,10 +342,61 @@ bool TargaImage::Dither_Random()
 //  operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+#define pixel_at(x,y) (data + (y * width * 4) + (x * 4))
+
+bool DitherFSPixel(int x, int y, int width, int height, unsigned char *data, double amount)
+{
+    double val;
+
+    if (x < 0 || x >= width)
+        return false;
+    if (y < 0 || y >= height)
+        return false;
+
+    val = *(pixel_at(x,y));
+    val = val + amount;
+    *(pixel_at(x,y)+0) = val;
+    *(pixel_at(x,y)+1) = val;
+    *(pixel_at(x,y)+2) = val;
+    *(pixel_at(x,y)+3) = 255;
+
+    return true;
+}
+
 bool TargaImage::Dither_FS()
 {
-    ClearToBlack();
-    return false;
+    if (! data)
+        return NULL;
+    
+    To_Grayscale();
+
+    int z_width = width-1;
+    int z_i = 0;
+    int z_dir = 1;
+
+    for (int j = 0 ; j < height; j++) {
+        for (int i = z_i; (z_dir == 1) ? (i <= z_width) : (i >= z_width); i+=z_dir) {
+            double e;
+            unsigned char blackwhite;
+            unsigned char v = *(pixel_at(i,j));
+        
+            blackwhite = (v > 128) ? 255 : 0;
+            e = v-blackwhite;
+
+            *(pixel_at(i,j)+0) = blackwhite;
+            *(pixel_at(i,j)+1) = blackwhite;
+            *(pixel_at(i,j)+2) = blackwhite;
+            *(pixel_at(i,j)+3) = 255;
+
+            DitherFSPixel(i+z_dir,j+0,width,height,data,(7.0*e)/16.0);
+            DitherFSPixel(i-z_dir,j+1,width,height,data,(3.0*e)/16.0);
+            DitherFSPixel(i+0    ,j+1,width,height,data,(5.0*e)/16.0);
+            DitherFSPixel(i+z_dir,j+1,width,height,data,(1.0*e)/16.0);
+        }
+        int k = z_width; z_width = z_i; z_i = k; z_dir = -z_dir;
+    }
+    return true;
 }// Dither_FS
 
 
@@ -362,10 +413,12 @@ bool TargaImage::Dither_Bright()
     
     To_Grayscale();
 
-    int sum = 0;
+    long sum = 0;
     for (int i = 0; i < width * height * 4 ; i += 4)
         sum += data[i];
     sum /= (width * height);
+
+    cout << "Threshold: " << sum << endl;
 
     for (int i = 0 ; i < width * height * 4 ; i += 4)
     {
@@ -374,7 +427,7 @@ bool TargaImage::Dither_Bright()
 
         RGBA_To_RGB(data + i, rgb);
         
-        blackwhite = (rgb[0] > sum) ? 255 : 0; 
+        blackwhite = (rgb[0] > 109) ? 255 : 0; 
 
         data[i+0] = data[i+1] = data[i+2] = blackwhite;
     }
