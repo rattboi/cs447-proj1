@@ -408,26 +408,35 @@ bool TargaImage::Dither_FS()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Dither_Bright()
 {
+    std::vector<unsigned char> my_vec;
+    int sort_index;
+    double ratio,index;
+
     if (! data)
         return NULL;
     
     To_Grayscale();
 
     long sum = 0;
-    for (int i = 0; i < width * height * 4 ; i += 4)
+    for (int i = 0; i < width * height * 4 ; i += 4) {
         sum += data[i];
+        my_vec.push_back(data[i]);
+    }
     sum /= (width * height);
+    std::sort(my_vec.begin(), my_vec.end());
 
-    cout << "Threshold: " << sum << endl;
+    ratio = (double)sum/255.0;
+    index = my_vec.size();
 
-    for (int i = 0 ; i < width * height * 4 ; i += 4)
-    {
+    sort_index = (1.0-ratio)*index;
+    
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
         unsigned char  rgb[3];
         unsigned char  blackwhite;
 
         RGBA_To_RGB(data + i, rgb);
         
-        blackwhite = (rgb[0] > 109) ? 255 : 0; 
+        blackwhite = (rgb[0] < my_vec[sort_index]) ? 0 : 255; 
 
         data[i+0] = data[i+1] = data[i+2] = blackwhite;
     }
@@ -488,9 +497,14 @@ bool TargaImage::Comp_Over(TargaImage* pImage)
         cout <<  "Comp_Over: Images not the same size\n";
         return false;
     }
+    
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
+        double alpha = ((double)data[i + 3]) / 255.0;
 
-    ClearToBlack();
-    return false;
+        for (int j = 0; j < 4; j++) 
+            data[i+j] += (pImage->data[i+j]*(1.0-alpha));;
+    }
+    return true;
 }// Comp_Over
 
 
@@ -508,8 +522,13 @@ bool TargaImage::Comp_In(TargaImage* pImage)
         return false;
     }
 
-    ClearToBlack();
-    return false;
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
+        double alpha = ((double)pImage->data[i + 3]) / 255.0;
+
+        for (int j = 0; j < 4; j++) 
+            data[i+j] *= alpha;
+    }
+    return true;
 }// Comp_In
 
 
@@ -521,14 +540,18 @@ bool TargaImage::Comp_In(TargaImage* pImage)
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Comp_Out(TargaImage* pImage)
 {
-    if (width != pImage->width || height != pImage->height)
-    {
+    if (width != pImage->width || height != pImage->height) {
         cout << "Comp_Out: Images not the same size\n";
         return false;
     }
 
-    ClearToBlack();
-    return false;
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
+        double alpha = ((double)pImage->data[i + 3]) / 255.0;
+
+        for (int j = 0; j < 4; j++) 
+            data[i+j] *= (1.0-alpha);
+    }
+    return true;
 }// Comp_Out
 
 
@@ -546,8 +569,14 @@ bool TargaImage::Comp_Atop(TargaImage* pImage)
         return false;
     }
 
-    ClearToBlack();
-    return false;
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
+        double alphaf = ((double)data[i + 3]) / 255.0;
+        double alphag = ((double)pImage->data[i + 3]) / 255.0;
+
+        for (int j = 0; j < 4; j++) 
+            data[i+j] = (data[i+j] * alphag) + (pImage->data[i+j] * (1.0-alphaf));
+    }
+    return true;
 }// Comp_Atop
 
 
@@ -565,8 +594,14 @@ bool TargaImage::Comp_Xor(TargaImage* pImage)
         return false;
     }
 
-    ClearToBlack();
-    return false;
+    for (int i = 0 ; i < width * height * 4 ; i += 4) {
+        double alphaf = ((double)data[i + 3]) / 255.0;
+        double alphag = ((double)pImage->data[i + 3]) / 255.0;
+
+        for (int j = 0; j < 4; j++) 
+            data[i+j] = (data[i+j] * (1.0-alphag)) + (pImage->data[i+j] * (1.0-alphaf));
+    }
+    return true;
 }// Comp_Xor
 
 
@@ -610,10 +645,65 @@ bool TargaImage::Difference(TargaImage* pImage)
 //      Perform 5x5 box filter on this image.  Return success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+#define filter_pixel_at(img,x,y) (img + ((y) * width * 4) + ((x) * 4))
+
+bool ApplyFilter(unsigned char *src, unsigned char *dest, int x, int y, int width, int height, double filter[5][5])
+{
+    unsigned char sp,dp;
+    double t_pix;
+
+    for (int k = 0; k < 3; k++) {
+        t_pix = 0.0;
+        for (int j = -2; j < 3; j++) {
+            for (int i = -2; i < 3; i++) {
+                if (x+i < 0 || x+i >= width)
+                    continue;
+                if (y+j < 0 || y+j >= height)
+                    continue;
+                
+                sp = *(filter_pixel_at(src,x+i,y+j)+k);
+                t_pix += sp * filter[j+2][i+2];  
+            }
+        }
+        if (t_pix > 255) {
+            cout << "Clipping high" << endl;
+        }
+        
+        if (t_pix < 0) {
+            cout << "Clipping high" << endl;
+        }
+        
+        dp = (t_pix > 255 ? 255 : (t_pix < 0 ? 0 : t_pix));
+        *(filter_pixel_at(dest,x,y)+k) = dp;
+    }
+    return true;
+}
+
+bool ApplyFilterToImage(unsigned char *src, int width, int height, double filter[5][5])
+{
+    unsigned char   *dest = new unsigned char[width * height * 4];
+
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            ApplyFilter(src, dest, i, j, width, height, filter);
+        }
+    }
+    memcpy(src,dest,width*height*4);
+    return true;
+}
+
 bool TargaImage::Filter_Box()
 {
-    ClearToBlack();
-    return false;
+    double box[5][5]; 
+    
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++)
+            box[j][i] = 1.0/25.0;
+
+    ApplyFilterToImage(data, width, height, box);
+
+    return true;
 }// Filter_Box
 
 
@@ -625,8 +715,17 @@ bool TargaImage::Filter_Box()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Bartlett()
 {
-    ClearToBlack();
-    return false;
+    double bartlett[5][5] = {{1, 2, 3, 2, 1},
+                             {2, 4, 6, 4, 2},
+                             {3, 6, 9, 6, 3},
+                             {2, 4, 6, 4, 2},
+                             {1, 2, 3, 2, 1}}; 
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++)
+            bartlett[j][i] /= 81.0;
+
+    ApplyFilterToImage(data, width, height, bartlett);
+    return true;
 }// Filter_Bartlett
 
 
@@ -638,8 +737,24 @@ bool TargaImage::Filter_Bartlett()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Gaussian()
 {
-    ClearToBlack();
-    return false;
+    double gaussian1d[5];
+    double gaussian2d[5][5];
+
+    int sum = 0;
+    for (int i = 0; i < 5; i++) {
+        gaussian1d[i] = Binomial(4, i);
+        sum += gaussian1d[i];
+    }
+
+    for (int i = 0; i < 5; i++) gaussian1d[i] /= sum; 
+    
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++)
+            gaussian2d[j][i] = gaussian1d[i] * gaussian1d[j];
+
+    ApplyFilterToImage(data, width, height, gaussian2d);
+
+    return true;
 }// Filter_Gaussian
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -664,8 +779,29 @@ bool TargaImage::Filter_Gaussian_N( unsigned int N )
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Edge()
 {
-    ClearToBlack();
-    return false;
+    double edge[5][5];
+    double gaussian1d[5];
+    double gaussian2d[5][5];
+
+    edge[2][2] = 1.0;
+
+    int sum = 0;
+    for (int i = 0; i < 5; i++) {
+        gaussian1d[i] = Binomial(4, i);
+        sum += gaussian1d[i];
+    }
+
+    for (int i = 0; i < 5; i++) gaussian1d[i] /= sum; 
+    
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++) {
+            gaussian2d[j][i] = gaussian1d[i] * gaussian1d[j];
+            edge[j][i] = edge[j][i] - gaussian2d[j][i];
+        }
+
+    ApplyFilterToImage(data, width, height, edge);
+    
+    return true;
 }// Filter_Edge
 
 
@@ -677,8 +813,22 @@ bool TargaImage::Filter_Edge()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Enhance()
 {
-    ClearToBlack();
-    return false;
+    unsigned char   *dest = new unsigned char[width * height * 4];
+    memcpy(dest, data, sizeof(unsigned char) * width * height * 4);
+
+    Filter_Edge();
+
+    for (int i = 0; i < width * height * 4; i+=4)
+        for (int j = 0; j < 3; j++) {
+            int k = dest[i+j] + data[i+j];
+            if (k > 255) k = 255;
+            dest[i+j] = k;
+        }
+
+    memcpy(data, dest, sizeof(unsigned char) * width * height * 4);
+    delete [] dest;
+
+    return true;
 }// Filter_Enhance
 
 
