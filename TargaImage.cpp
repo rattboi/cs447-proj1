@@ -813,21 +813,30 @@ bool TargaImage::Filter_Edge()
 ///////////////////////////////////////////////////////////////////////////////
 bool TargaImage::Filter_Enhance()
 {
-    unsigned char   *dest = new unsigned char[width * height * 4];
-    memcpy(dest, data, sizeof(unsigned char) * width * height * 4);
+    double edge[5][5];
+    double enhance[5][5];
+    double gaussian1d[5];
+    double gaussian2d[5][5];
 
-    Filter_Edge();
+    edge[2][2] = enhance[2][2] = 1.0;
 
-    for (int i = 0; i < width * height * 4; i+=4)
-        for (int j = 0; j < 3; j++) {
-            int k = dest[i+j] + data[i+j];
-            if (k > 255) k = 255;
-            dest[i+j] = k;
+    int sum = 0;
+    for (int i = 0; i < 5; i++) {
+        gaussian1d[i] = Binomial(4, i);
+        sum += gaussian1d[i];
+    }
+
+    for (int i = 0; i < 5; i++) gaussian1d[i] /= sum; 
+    
+    for (int j = 0; j < 5; j++)
+        for (int i = 0; i < 5; i++) {
+            gaussian2d[j][i] = gaussian1d[i] * gaussian1d[j];
+            edge[j][i] = edge[j][i] - gaussian2d[j][i];
+            enhance[j][i] += edge[j][i];
         }
 
-    memcpy(data, dest, sizeof(unsigned char) * width * height * 4);
-    delete [] dest;
-
+    ApplyFilterToImage(data, width, height, enhance);
+    
     return true;
 }// Filter_Enhance
 
